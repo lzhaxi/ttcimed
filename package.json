@@ -1,0 +1,28 @@
+{
+  "name": "ttcimed",
+  "version": "0.1.0",
+  "description": "Discord table tennis tournament bot (Swiss to Top Cut)",
+  "type": "module",
+  "private": true,
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "wrangler dev src/server.js",
+    "deploy": "wrangler deploy",
+    "register": "node src/register.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "discord-interactions": "^4.1.0",
+    "itty-router": "^5.0.18"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.7",
+    "wrangler": "^4.22.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "fsevents@2.3.3": true,
+    "sharp@0.34.5": true,
+    "workerd@1.20260630.1": true
+  }
+}
