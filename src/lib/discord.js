@@ -107,5 +107,13 @@ export function userError(code) {
     SWISS_COMPLETE: 'Swiss rounds are complete.',
     TOP_CUT_COMPLETE: 'Top cut is complete.',
   };
-  return messages[code] ?? 'Something went wrong. Please try again or contact a TO.';
+  if (messages[code]) return messages[code];
+
+  // If the code is uppercase snake_case, it's an unmapped internal error code.
+  if (typeof code === 'string' && /^[A-Z_]+$/.test(code)) {
+    return 'Something went wrong. Please try again or contact a TO.';
+  }
+
+  // Otherwise, it might be a literal string passed directly, or an unhandled SQL error.
+  return code ?? 'Something went wrong. Please try again or contact a TO.';
 }

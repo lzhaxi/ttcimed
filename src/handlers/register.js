@@ -9,12 +9,12 @@ export async function handleRegister(interaction, env) {
     const tournament = await getActiveTournament(supabase, interaction.guild_id);
 
     if (!tournament) {
-      await editReply(env, interaction, { content: userError('There is no tournament to register for.') });
+      await editReply(env, interaction, { content: userError('NO_TOURNAMENT') });
       return;
     }
 
     if (tournament.phase !== 'registration') {
-      await editReply(env, interaction, { content: userError("The tournament's registration has closed.") });
+      await editReply(env, interaction, { content: userError('REGISTRATION_CLOSED') });
       return;
     }
 

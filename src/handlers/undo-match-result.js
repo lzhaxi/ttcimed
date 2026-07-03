@@ -40,10 +40,15 @@ export async function handleUndoMatchResult(interaction, env) {
       return;
     }
 
+    const targetPhase = tournament.phase === 'completed' ? 'top_cut' : tournament.phase;
+    const targetRound = tournament.current_round;
+
     const { data: match } = await supabase
       .from('matches')
       .select('*, player1:players!matches_player1_id_fkey(*), player2:players!matches_player2_id_fkey(*)')
       .eq('tournament_id', tournament.id)
+      .eq('phase', targetPhase)
+      .eq('round_number', targetRound)
       .neq('status', 'pending')
       .or(
         `and(player1_id.eq.${p1.id},player2_id.eq.${p2.id}),and(player1_id.eq.${p2.id},player2_id.eq.${p1.id})`
@@ -53,7 +58,7 @@ export async function handleUndoMatchResult(interaction, env) {
       .maybeSingle();
 
     if (!match) {
-      await editReply(env, interaction, { content: 'No match found with those players.' });
+      await editReply(env, interaction, { content: 'No completed match found between those players in the **current** active round. You cannot undo matches from previous rounds.' });
       return;
     }
 
