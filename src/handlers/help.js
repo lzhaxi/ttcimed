@@ -40,10 +40,10 @@ export async function handleHelp(interaction, env) {
       additionalHelp = 'TO Only. Start the tournament with a tournament name for identification. This will automatically send the round 1 pairings and end registration.';
       break;
     case 'force-match-winner' || 'force':
-      additionalHelp = 'TO Only. When needed, force a specific match to have a random or specific winner. For a specific winner, you need the optional winner argument.';
+      additionalHelp = 'TO Only. When needed, force a match between two specific players to have a random or specific winner. For a specific winner, you need the optional winner argument. Without the winner argument, when the tournament is in the swiss stage, the winner is randomly decided, and when the tournament is in the elimination bracket stage, the winner is the higher seed.';
       break;
     case 'undo-match-result' || 'undo':
-      additionalHelp = 'TO Only. Undo a match for the current round. Cannot undo if the round has already progressed beyond the match.';
+      additionalHelp = 'TO Only. Undo a match between two specific players for the current round. Cannot undo if the round has already progressed beyond the match.';
       break;
     case 'next-round':
       additionalHelp = 'TO Only. Progress to the next round. If there are pending matches, use force = True to randomize the winner of each match. If the current round is the final round of swiss, this will progress to the elimination bracket. You can optionally use extend_deadline = True to push the new round\'s deadline to the Sunday after the upcoming one (useful if you progress a round early mid-week and want to give players a full week+ to play).';

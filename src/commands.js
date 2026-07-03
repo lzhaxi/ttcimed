@@ -73,7 +73,7 @@ export const NEXT_ROUND_COMMAND = {
 
 export const HELP_COMMAND = {
   name: 'help',
-  description: 'Show help for commands or a specific command (ephemeral)',
+  description: 'Show help for commands or a specific command',
   type: 1,
   options: [
     { name: 'command', description: 'Optional command to get detailed help for', type: 3, required: false },
@@ -82,13 +82,13 @@ export const HELP_COMMAND = {
 
 export const RULES_COMMAND = {
   name: 'rules',
-  description: 'Show tournament rules (ephemeral)',
+  description: 'Show tournament rules',
   type: 1,
 };
 
 export const TO_ADD_COMMAND = {
   name: 'to-add',
-  description: 'Add a user to the tournament organizers list (Admin/TO only)',
+  description: 'Add a user to the tournament organizers list (TO only)',
   type: 1,
   options: [
     { name: 'user', description: 'The user to add as a TO', type: 6, required: true },
@@ -97,7 +97,7 @@ export const TO_ADD_COMMAND = {
 
 export const TO_REMOVE_COMMAND = {
   name: 'to-remove',
-  description: 'Remove a user from the tournament organizers list (Admin/TO only)',
+  description: 'Remove a user from the tournament organizers list (TO only)',
   type: 1,
   options: [
     { name: 'user', description: 'The user to remove', type: 6, required: true },
@@ -106,7 +106,7 @@ export const TO_REMOVE_COMMAND = {
 
 export const CANCEL_TOURNAMENT_COMMAND = {
   name: 'cancel-tournament',
-  description: 'Cancel and delete the active tournament (Admin/TO only)',
+  description: 'Cancel and delete the active tournament (TO only)',
   type: 1,
   options: [
     { name: 'confirm', description: 'Type "Yes" to confirm deletion of the tournament and all its data', type: 3, required: true },
