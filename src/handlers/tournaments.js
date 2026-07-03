@@ -19,9 +19,10 @@ export async function handleTournaments(interaction, env) {
     }
 
     const lines = tournaments.map(t => {
-      const date = new Date(t.created_at).toLocaleDateString();
+      const startStr = new Date(t.created_at).toLocaleDateString();
+      const endStr = t.phase === 'completed' ? ` to ${new Date(t.updated_at).toLocaleDateString()}` : '';
       const activeStr = t.phase !== 'completed' ? ' **(Active)**' : '';
-      return `\`${t.id}\` | **${t.name}** (${date}) - Phase: ${t.phase}${activeStr}`;
+      return `**#${t.id}** | **${t.name}** (${startStr}${endStr}) - Phase: ${t.phase}${activeStr}`;
     });
 
     const description = lines.join('\n\n');

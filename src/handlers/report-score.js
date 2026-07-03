@@ -66,9 +66,9 @@ export async function handleReportScore(interaction, env) {
 
     const { data: result, error } = await supabase.rpc('report_match_result', {
       p_match_id: match.id,
-      p_reporter_discord_id: user.id,
-      p_player1_score: p1Score,
-      p_player2_score: p2Score,
+      p_discord_id: user.id,
+      p_p1_score: p1Score,
+      p_p2_score: p2Score,
     });
 
     if (error) throw error;

@@ -124,7 +124,7 @@ export const HISTORY_COMMAND = {
       type: 1,
       options: [
         { name: 'user', description: 'The player', type: 6, required: true },
-        { name: 'tournament', description: 'Tournament ID (optional)', type: 3, required: false }
+        { name: 'tournament', description: 'Tournament ID (optional)', type: 4, required: false }
       ]
     },
     {
@@ -132,7 +132,7 @@ export const HISTORY_COMMAND = {
       description: 'View final standings for a tournament',
       type: 1,
       options: [
-        { name: 'tournament', description: 'Tournament ID (optional)', type: 3, required: false }
+        { name: 'tournament', description: 'Tournament ID (optional)', type: 4, required: false }
       ]
     },
     {
@@ -140,7 +140,7 @@ export const HISTORY_COMMAND = {
       description: 'View the Top Cut bracket for a tournament',
       type: 1,
       options: [
-        { name: 'tournament', description: 'Tournament ID (optional)', type: 3, required: false }
+        { name: 'tournament', description: 'Tournament ID (optional)', type: 4, required: false }
       ]
     }
   ]
@@ -167,6 +167,7 @@ export const ALL_COMMANDS = [
   TO_REMOVE_COMMAND,
   CANCEL_TOURNAMENT_COMMAND,
   HISTORY_COMMAND,
+  TOURNAMENTS_COMMAND,
 ];
 
 export const COMMAND_MAP = {

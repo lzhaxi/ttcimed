@@ -1,4 +1,4 @@
-import { resolveEphemeral, sendChannelMessage, editReply, userError } from '../lib/discord.js';
+import { editReply, userError } from '../lib/discord.js';
 import { getSupabase } from '../lib/supabase.js';
 import { standingsEmbed, bracketEmbed } from '../utils/embeds.js';
 import { getSingleEliminationRoundName } from '../utils/permissions.js';
@@ -24,7 +24,7 @@ export async function handleHistory(interaction, env) {
     const tournamentIdOpt = getSubcommandOption(interaction, 'tournament');
     let tournament;
 
-    if (tournamentIdOpt) {
+    if (tournamentIdOpt !== undefined) {
       // Look up specific tournament by ID
       const { data, error } = await supabase
         .from('tournaments')
@@ -100,8 +100,7 @@ export async function handleHistory(interaction, env) {
         }).join('\n');
       }
 
-      await resolveEphemeral(env, interaction);
-      await sendChannelMessage(env, interaction, {
+      await editReply(env, interaction, {
         embeds: [{
           title,
           description,
@@ -126,8 +125,7 @@ export async function handleHistory(interaction, env) {
         players = sortByStandings(players);
       }
 
-      await resolveEphemeral(env, interaction);
-      await sendChannelMessage(env, interaction, {
+      await editReply(env, interaction, {
         embeds: [standingsEmbed(tournament, players ?? [])],
       });
 
@@ -147,8 +145,7 @@ export async function handleHistory(interaction, env) {
         return;
       }
 
-      await resolveEphemeral(env, interaction);
-      await sendChannelMessage(env, interaction, { embeds: [bracketEmbed(tournament, matches)] });
+      await editReply(env, interaction, { embeds: [bracketEmbed(tournament, matches)] });
 
     } else {
       await editReply(env, interaction, { content: `Unknown subcommand: ${subCommandName}` });
