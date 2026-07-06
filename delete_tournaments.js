@@ -36,16 +36,13 @@ async function run() {
     console.log('--------------------------------------------------');
   });
 
-  // =========================================================================
-  // TO DELETE TOURNAMENTS:
-  // Add the IDs of the tournaments you want to delete into the array below.
-  // Example: const idsToDelete = ['uuid-1', 'uuid-2'];
-  // =========================================================================
-  const idsToDelete = []; 
+  const args = process.argv.slice(2);
+  const idsToDelete = args.map(arg => parseInt(arg, 10)).filter(id => !isNaN(id));
 
   if (idsToDelete.length === 0) {
     console.log('\n⚠️ No IDs specified for deletion.');
-    console.log('To delete tournaments, copy their IDs into the "idsToDelete" array in this script and run it again.');
+    console.log('To delete tournaments, pass their IDs as arguments when running the script.');
+    console.log('Example: node delete_tournaments.js 1 2 3');
     return;
   }
 
