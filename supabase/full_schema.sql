@@ -260,14 +260,14 @@ BEGIN
   END IF;
 
   IF v_match.player2_id IS NULL THEN
-    v_p1_score := 2;
+    v_p1_score := 3;
     v_p2_score := 0;
   ELSIF p_winner_id = v_match.player1_id THEN
-    v_p1_score := 2;
+    v_p1_score := 3;
     v_p2_score := 0;
   ELSE
     v_p1_score := 0;
-    v_p2_score := 2;
+    v_p2_score := 3;
   END IF;
 
   UPDATE matches
