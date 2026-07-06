@@ -44,7 +44,7 @@ export async function handleForceMatchWinner(interaction, env) {
 
     // If winner specified, validate; otherwise choose based on phase (top_cut -> higher seed wins, swiss -> random)
     let chosenWinnerDiscord = winnerDiscord;
-    let reasonText = null;
+
 
     if (!chosenWinnerDiscord) {
       // fetch player seeds to decide for top_cut or pick randomly for swiss
@@ -59,11 +59,11 @@ export async function handleForceMatchWinner(interaction, env) {
       if (phase === 'top_cut' && p1 && p2 && typeof p1.seed === 'number' && typeof p2.seed === 'number') {
         // lower seed number = higher seed (1 is top). Choose the higher seed (lower number).
         chosenWinnerDiscord = p1.seed <= p2.seed ? p1.discord_id : p2.discord_id;
-        reasonText = 'Defaulted to higher seed (top cut).';
+
       } else {
         // swiss or missing seeds: random
         chosenWinnerDiscord = Math.random() < 0.5 ? p1?.discord_id ?? p2?.discord_id : p2?.discord_id ?? p1?.discord_id;
-        reasonText = 'Winner chosen randomly.';
+
       }
     }
 
@@ -87,9 +87,8 @@ export async function handleForceMatchWinner(interaction, env) {
     const { data: result, error } = await supabase.rpc('force_match_winner', {
       p_match_id: match.id,
       p_winner_id: winnerId,
-      p_reason: reasonText || 'TO override',
       p_admin_discord_id: user.id,
-      p_as_default: true,
+      p_is_default: true,
     });
 
     if (error) throw error;
@@ -104,7 +103,7 @@ export async function handleForceMatchWinner(interaction, env) {
       .eq('id', match.id)
       .single();
 
-    const embed = matchResultEmbed(updated, reasonText, tournament.top_cut_size);
+    const embed = matchResultEmbed(updated, tournament.top_cut_size);
     await resolveEphemeral(env, interaction);
     await sendChannelMessage(env, interaction, { embeds: [embed] });
   } catch (err) {

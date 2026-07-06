@@ -134,7 +134,7 @@ export function buildSwissMatchRows(tournamentId, round, pairs, bye) {
       player2_score: 0,
       status: 'completed',
       completed_at: new Date().toISOString(),
-      default_reason: 'Bye',
+
     });
   }
 

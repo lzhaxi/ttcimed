@@ -67,7 +67,6 @@ CREATE TABLE matches (
   player2_score INT,
   winner_id UUID REFERENCES players(id),
   status match_status NOT NULL DEFAULT 'pending',
-  default_reason TEXT,
   reported_by TEXT,
   player1_scheduled BOOLEAN NOT NULL DEFAULT false,
   player2_scheduled BOOLEAN NOT NULL DEFAULT false,
@@ -231,7 +230,6 @@ $$;
 CREATE OR REPLACE FUNCTION force_match_winner(
   p_match_id UUID,
   p_winner_id UUID,
-  p_reason TEXT,
   p_admin_discord_id TEXT DEFAULT 'system',
   p_is_default BOOLEAN DEFAULT false
 )
@@ -278,7 +276,6 @@ BEGIN
     player2_score = v_p2_score,
     winner_id = p_winner_id,
     status = CASE WHEN p_is_default THEN 'defaulted'::match_status ELSE 'completed'::match_status END,
-    default_reason = p_reason,
     reported_by = p_admin_discord_id,
     completed_at = NOW()
   WHERE id = p_match_id;
@@ -289,7 +286,6 @@ BEGIN
     CASE WHEN p_is_default THEN 'defaulted' ELSE 'completed' END,
     jsonb_build_object(
       'winner_id', p_winner_id,
-      'reason', p_reason,
       'player1_score', v_p1_score,
       'player2_score', v_p2_score,
       'player1', row_to_json(v_p1),
@@ -395,7 +391,6 @@ BEGIN
     player2_score = NULL,
     winner_id = NULL,
     status = 'pending',
-    default_reason = NULL,
     reported_by = NULL,
     completed_at = NULL
   WHERE id = p_match_id;
@@ -417,7 +412,6 @@ DECLARE
   v_tournament tournaments%ROWTYPE;
   v_match RECORD;
   v_winner_id UUID;
-  v_reason TEXT;
   v_count INT := 0;
   v_seed1 INT;
   v_seed2 INT;
@@ -441,10 +435,8 @@ BEGIN
   LOOP
     IF v_match.player1_scheduled AND NOT v_match.player2_scheduled THEN
       v_winner_id := v_match.player1_id;
-      v_reason := 'Default win: Player 1 attempted to schedule; Player 2 did not respond.';
     ELSIF v_match.player2_scheduled AND NOT v_match.player1_scheduled THEN
       v_winner_id := v_match.player2_id;
-      v_reason := 'Default win: Player 2 attempted to schedule; Player 1 did not respond.';
     ELSE
       IF v_match.phase = 'top_cut' THEN
         SELECT seed INTO v_seed1 FROM players WHERE id = v_match.player1_id;
@@ -454,18 +446,16 @@ BEGIN
         ELSE
           v_winner_id := v_match.player2_id;
         END IF;
-        v_reason := 'Default win: Higher seed wins in top cut by default.';
       ELSE
         IF random() < 0.5 THEN
           v_winner_id := v_match.player1_id;
         ELSE
           v_winner_id := v_match.player2_id;
         END IF;
-        v_reason := 'Default win: Neither player reported within the deadline.';
       END IF;
     END IF;
 
-    PERFORM force_match_winner(v_match.id, v_winner_id, v_reason, 'system-deadline', true);
+    PERFORM force_match_winner(v_match.id, v_winner_id, 'system-deadline', true);
     v_count := v_count + 1;
   END LOOP;
 

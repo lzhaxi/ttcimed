@@ -4,7 +4,7 @@ function mention(player) {
   return player?.discord_id ? `<@${player.discord_id}>` : player?.discord_username ?? 'Unknown';
 }
 
-export function matchResultEmbed(match, reason, topCutSize) {
+export function matchResultEmbed(match, topCutSize) {
   const p1 = mention(match.player1) ?? 'Player 1';
   const p2 = mention(match.player2) ?? 'Bye';
   const p1Score = match.player1_score ?? (match.winner_id === match.player1_id ? 1 : 0);
@@ -26,7 +26,7 @@ export function matchResultEmbed(match, reason, topCutSize) {
       { name: 'Round', value: roundName, inline: true },
       { name: 'Status', value: match.status, inline: true },
     ],
-    footer: reason ? { text: reason } : undefined,
+
     timestamp: new Date().toISOString(),
   };
 }

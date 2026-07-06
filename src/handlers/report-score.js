@@ -83,7 +83,7 @@ export async function handleReportScore(interaction, env) {
       .eq('id', match.id)
       .single();
 
-    const embed = matchResultEmbed(updated, null, tournament.top_cut_size);
+    const embed = matchResultEmbed(updated, tournament.top_cut_size);
     await resolveEphemeral(env, interaction);
     await sendChannelMessage(env, interaction, { embeds: [embed] });
   } catch (err) {
