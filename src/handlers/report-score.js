@@ -89,7 +89,7 @@ export async function handleReportScore(interaction, env) {
   } catch (err) {
     console.error('report-score error:', err);
     await editReply(env, interaction, {
-      content: 'Could not report score. Please try again or contact a TO.',
+      content: `Could not report score. Please try again or contact a TO.\n\n**Error Details:**\n\`${err.message}\``,
     });
   }
 }

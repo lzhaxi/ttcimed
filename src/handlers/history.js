@@ -154,7 +154,7 @@ export async function handleHistory(interaction, env) {
   } catch (err) {
     console.error('history error:', err);
     await editReply(env, interaction, {
-      content: 'Could not fetch history. Please try again.',
+      content: `Could not fetch history. Please try again.\n\n**Error Details:**\n\`${err.message}\``,
     });
   }
 }

@@ -56,7 +56,7 @@ export async function handleToAdd(interaction, env) {
   } catch (err) {
     console.error('to-add error:', err);
     await editReply(env, interaction, {
-      content: 'Could not add user to the tournament organizers list. Please try again.',
+      content: `Could not add user to the tournament organizers list. Please try again.\n\n**Error Details:**\n\`${err.message}\``,
     });
   }
 }

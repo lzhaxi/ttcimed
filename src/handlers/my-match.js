@@ -34,7 +34,7 @@ export async function handleMyMatch(interaction, env) {
   } catch (err) {
     console.error('my-match error:', err);
     await editReply(env, interaction, {
-      content: 'Could not fetch your match. Please try again later.',
+      content: `Could not fetch your match. Please try again later.\n\n**Error Details:**\n\`${err.message}\``,
     });
   }
 }

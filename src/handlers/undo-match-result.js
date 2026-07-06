@@ -84,7 +84,7 @@ export async function handleUndoMatchResult(interaction, env) {
   } catch (err) {
     console.error('undo-match-result error:', err);
     await editReply(env, interaction, {
-      content: 'Could not undo match result. Please try again.',
+      content: `Could not undo match result. Please try again.\n\n**Error Details:**\n\`${err.message}\``,
     });
   }
 }

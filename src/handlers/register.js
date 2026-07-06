@@ -51,7 +51,7 @@ export async function handleRegister(interaction, env) {
   } catch (err) {
     console.error('register error:', err);
     await editReply(env, interaction, {
-      content: 'Could not complete registration. Please try again later.',
+      content: `Could not complete registration. Please try again later.\n\n**Error Details:**\n\`${err.message}\``,
     });
   }
 }

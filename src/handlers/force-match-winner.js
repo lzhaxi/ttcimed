@@ -109,7 +109,7 @@ export async function handleForceMatchWinner(interaction, env) {
   } catch (err) {
     console.error('force-match-winner error:', err);
     await editReply(env, interaction, {
-      content: 'Could not force match result. Please try again.',
+      content: `Could not force match result. Please try again.\n\n**Error Details:**\n\`${err.message}\``,
     });
   }
 }

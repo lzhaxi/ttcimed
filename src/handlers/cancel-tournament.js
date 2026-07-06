@@ -35,7 +35,7 @@ export async function handleCancelTournament(interaction, env) {
   } catch (err) {
     console.error('tournament-cancel error:', err);
     await editReply(env, interaction, {
-      content: 'Could not cancel the tournament. Please try again or check logs.',
+      content: `Could not cancel the tournament. Please try again or check logs.\n\n**Error Details:**\n\`${err.message}\``,
     });
   }
 }

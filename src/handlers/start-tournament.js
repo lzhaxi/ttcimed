@@ -113,7 +113,7 @@ export async function handleStartTournament(interaction, env) {
   } catch (err) {
     console.error('tournament-start error:', err);
     await editReply(env, interaction, {
-      content: 'Could not start the tournament. Please try again or check Supabase logs.',
+      content: `Could not start the tournament. Please try again or check Supabase logs.\n\n**Error Details:**\n\`${err.message}\``,
     });
   }
 }

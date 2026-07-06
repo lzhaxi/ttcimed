@@ -54,7 +54,7 @@ export async function handleToRemove(interaction, env) {
   } catch (err) {
     console.error('to-remove error:', err);
     await editReply(env, interaction, {
-      content: 'Could not remove user from the tournament organizers list. Please try again.',
+      content: `Could not remove user from the tournament organizers list. Please try again.\n\n**Error Details:**\n\`${err.message}\``,
     });
   }
 }

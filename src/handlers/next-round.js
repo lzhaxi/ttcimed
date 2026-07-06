@@ -95,7 +95,7 @@ export async function handleNextRound(interaction, env) {
   } catch (err) {
     console.error('next-round error:', err);
     await editReply(env, interaction, {
-      content: 'Could not advance the tournament. Please try again.',
+      content: `Could not advance the tournament. Please try again.\n\n**Error Details:**\n\`${err.message}\``,
     });
   }
 }

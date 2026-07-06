@@ -490,3 +490,13 @@ CREATE TRIGGER trg_reset_tournament_sequence
 AFTER DELETE ON tournaments
 FOR EACH STATEMENT
 EXECUTE FUNCTION reset_tournament_sequence();
+
+-- 4. Permissions / Grants
+-- Required if the schema is ever dropped and recreated, to restore Supabase API access
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;

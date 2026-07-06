@@ -68,7 +68,7 @@ export async function handleTournament(interaction, env) {
   } catch (err) {
     console.error('tournament command error:', err);
     await editReply(env, interaction, {
-      content: 'Could not load tournament status. Please try again later.',
+      content: `Could not load tournament status. Please try again later.\n\n**Error Details:**\n\`${err.message}\``,
     });
   }
 }

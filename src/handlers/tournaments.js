@@ -39,6 +39,6 @@ export async function handleTournaments(interaction, env) {
 
   } catch (err) {
     console.error('tournaments error:', err);
-    await editReply(env, interaction, { content: 'Could not fetch tournaments.' });
+    await editReply(env, interaction, { content: `Could not fetch tournaments.\n\n**Error Details:**\n\`${err.message}\`` });
   }
 }
