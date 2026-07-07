@@ -1,6 +1,6 @@
 import { deadlineTimestamp, getSingleEliminationRoundName } from '../utils/permissions.js';
 
-function mention(player) {
+export function mention(player) {
   return player?.discord_id ? `<@${player.discord_id}>` : player?.discord_username ?? 'Unknown';
 }
 

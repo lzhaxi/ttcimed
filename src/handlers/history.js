@@ -1,6 +1,6 @@
 import { editReply, userError } from '../lib/discord.js';
 import { getSupabase } from '../lib/supabase.js';
-import { standingsEmbed, bracketEmbed } from '../utils/embeds.js';
+import { standingsEmbed, bracketEmbed, mention } from '../utils/embeds.js';
 import { getSingleEliminationRoundName } from '../utils/permissions.js';
 import { sortByStandings } from '../services/swiss.js';
 
@@ -78,7 +78,9 @@ export async function handleHistory(interaction, env) {
       
       if (matchesError) throw matchesError;
 
-      const title = `Match History: ${player.discord_username}`;
+      const targetUser = interaction.data?.resolved?.users?.[targetUserId];
+      const displayName = targetUser?.global_name ?? targetUser?.username ?? player.discord_username;
+      const title = `Match History: ${displayName}`;
       let description = `**Tournament:** ${tournament.name}\n**Set Record:** ${player.swiss_wins}-${player.swiss_losses}-${player.swiss_draws} | **Game Record:** ${player.game_wins}-${player.game_losses}\n\n`;
 
       if (!matches || matches.length === 0) {
@@ -92,11 +94,11 @@ export async function handleHistory(interaction, env) {
           const phaseText = m.phase === 'swiss' ? `Swiss R${m.round_number}` : getSingleEliminationRoundName(tournament.top_cut_size, m.round_number);
           
           if (!opp) return `**[${phaseText}]** BYE`;
-          if (m.status === 'pending') return `**[${phaseText}]** Pending vs **${opp.discord_username}**`;
+          if (m.status === 'pending') return `**[${phaseText}]** Pending vs **${mention(opp)}**`;
 
           const result = myScore > oppScore ? '🟢 Won' : (myScore < oppScore ? '🔴 Lost' : '⚪ Drew');
           const scoreText = m.status === 'defaulted' ? '(Default)' : `(${myScore}-${oppScore})`;
-          return `**[${phaseText}]** ${result} vs **${opp.discord_username}** ${scoreText}`;
+          return `**[${phaseText}]** ${result} vs **${mention(opp)}** ${scoreText}`;
         }).join('\n');
       }
 

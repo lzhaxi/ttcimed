@@ -15,7 +15,7 @@ import {
   buildNextBracketRound,
   isRoundComplete,
 } from '../services/bracket.js';
-import { pairingsEmbed, bracketEmbed } from '../utils/embeds.js';
+import { pairingsEmbed, bracketEmbed, standingsEmbed } from '../utils/embeds.js';
 import { getNextSundayMidnightCT } from '../utils/dates.js';
 import { resolveEphemeral, sendChannelMessage } from '../lib/discord.js';
 
@@ -204,6 +204,7 @@ async function startTopCut(supabase, env, interaction, tournament, now, deadline
     .order('round_number', { ascending: true })
     .order('bracket_slot', { ascending: true });
 
+  const standingsEmb = standingsEmbed(tournament, sortedPlayers);
   const embed = bracketEmbed(updatedTournament, allTopCutMatches ?? []);
   
   const pings = (insertedMatches ?? [])
@@ -214,13 +215,19 @@ async function startTopCut(supabase, env, interaction, tournament, now, deadline
     .join(' ');
 
   await resolveEphemeral(env, interaction);
-  if (forcedText || pings) {
-    const textParts = [];
-    if (forcedText) textParts.push(`**Resolved Pending Matches:**\n${forcedText}`);
-    if (pings) textParts.push(pings + '\nPlease contact your opponent to schedule your match.');
-    await sendChannelMessage(env, interaction, { content: textParts.join('\n\n') });
+  
+  if (forcedText) {
+    await sendChannelMessage(env, interaction, { content: `**Resolved Pending Matches:**\n${forcedText}` });
   }
-  await sendChannelMessage(env, interaction, { embeds: [embed] });
+
+  await sendChannelMessage(env, interaction, { embeds: [standingsEmb] });
+
+  let pingsText = '';
+  if (pings) {
+    pingsText = '\n\n' + pings + '\nPlease contact your opponent to schedule your match.';
+  }
+
+  await sendChannelMessage(env, interaction, { content: pingsText || undefined, embeds: [embed] });
 }
 
 async function advanceTopCutRound(supabase, env, interaction, tournament, now, deadline, forcedText) {
