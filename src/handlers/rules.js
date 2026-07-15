@@ -12,6 +12,8 @@ export async function handleRules(interaction, env) {
     '- Ceiling, walls are not allowed. The corner protector on the MSB table is NOT considered part of the table.',
     '- Forfeits should be reported as 3-0.',
     '- If a match is not played by the deadline, a winner will be decided for you. If you have attempted to schedule with your opponent but your opponent has failed to respond, please ping or DM the tournament organizer with screenshots - you will likely be granted the win.',
+    '  - During swiss stage, matches are decided randomly.',
+    '  - During bracket stage, matches are decided based on the higher seed.',
     '## Tournament Format',
     '- Format is swiss followed by a single-elimination bracket. The number of rounds of swiss is determined by the number of participants.',
     '- Swiss is a format used so everyone can play as many competitive games as possible. In the first round, players are randomly paired, and subsequent round pairings depend on your win-loss record.',
