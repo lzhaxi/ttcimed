@@ -33,10 +33,10 @@ export const TOURNAMENT_COMMAND = {
 
 export const START_TOURNAMENT_COMMAND = {
   name: 'start-tournament',
-  description: 'Close registration and generate Round 1 pairings (TO only)',
+  description: 'Open registration for a new tournament (TO only)',
   type: 1,
   options: [
-    { name: 'name', description: 'Name of the tournament', type: 3, required: false },
+    { name: 'name', description: 'Name of the tournament', type: 3, required: true },
   ],
 };
 
@@ -63,13 +63,14 @@ export const UNDO_MATCH_RESULT_COMMAND = {
 
 export const NEXT_ROUND_COMMAND = {
   name: 'next-round',
-  description: 'Advance to the next Swiss round or Top Cut round (TO only)',
+  description: 'Close registration & start Round 1, or advance to the next round (TO only)',
   type: 1,
   options: [
     { name: 'force', description: 'Force-resolve any incomplete matches (true/false)', type: 5, required: false },
     { name: 'extend_deadline', description: 'Push the deadline back an extra week (true/false)', type: 5, required: false },
   ],
 };
+
 
 export const HELP_COMMAND = {
   name: 'help',

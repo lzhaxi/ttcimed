@@ -70,8 +70,8 @@ npm run deploy   # wrangler deploy
 | `/rules` | Everyone | View the tournament rules |
 
 **Tournament Organizer (TO) Commands:**
-- `/start-tournament` — Close registration and generate Round 1 pairings
-- `/next-round` — Advance to the next Swiss or Top Cut round
+- `/start-tournament` — Open registration for a new tournament
+- `/next-round` — Close registration & start Round 1, or advance to the next Swiss/Top Cut round
 - `/force-match-winner` — Manually resolve or override a match result
 - `/undo-match-result` — Revert a match to pending and recalculate standings
 - `/cancel-tournament` — Cancel and delete the active tournament
@@ -79,7 +79,9 @@ npm run deploy   # wrangler deploy
 
 ## Tournament flow
 
-1. Players `/register` (auto-creates a tournament per guild on first signup)
-2. TO runs `/tournament-start` when ≥9 players have joined
-3. Weekly rounds: 7-day deadline (TO discretion)
-4. After Swiss rounds → Top Cut single elimination → `/next-round` until champion
+1. TO runs `/start-tournament` to open registration, indicating a deadline.
+2. Players `/register` for the tournament
+3. TO runs `/next-round` when ≥9 players have joined and the deadline has passed (TO discretion). This will close registration, calculate rounds/top cut size, and post Round 1 pairings
+4. Weekly rounds: 7-day deadline (TO discretion)
+5. After Swiss rounds → Top Cut single elimination → `/next-round` until champion
+

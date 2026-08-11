@@ -6,7 +6,12 @@ import {
   getAllMatches,
   getRoundMatches,
 } from '../lib/supabase.js';
-import { isTournamentOrganizer, getSingleEliminationRoundName } from '../utils/permissions.js';
+import {
+  isTournamentOrganizer,
+  getSingleEliminationRoundName,
+  calcSwissRounds,
+  calcTopCutSize,
+} from '../utils/permissions.js';
 import { generatePairings, buildSwissMatchRows, sortByStandings } from '../services/swiss.js';
 import { insertMatchesWithByes } from '../services/matches.js';
 import {
@@ -19,6 +24,8 @@ import { pairingsEmbed, bracketEmbed, standingsEmbed } from '../utils/embeds.js'
 import { getNextSundayMidnightCT } from '../utils/dates.js';
 import { resolveEphemeral, sendChannelMessage } from '../lib/discord.js';
 
+const MIN_PLAYERS = 9;
+
 export async function handleNextRound(interaction, env) {
   const supabase = getSupabase(env);
   const forceResolve = Boolean(getOption(interaction, 'force'));
@@ -26,13 +33,21 @@ export async function handleNextRound(interaction, env) {
 
   try {
     const tournament = await getActiveTournament(supabase, interaction.guild_id);
-    if (!tournament || tournament.phase === 'registration') {
+    if (!tournament) {
       await editReply(env, interaction, { content: userError('NO_TOURNAMENT') });
       return;
     }
 
     if (!await isTournamentOrganizer(interaction, env, supabase)) {
       await editReply(env, interaction, { content: userError('UNAUTHORIZED') });
+      return;
+    }
+
+    const now = new Date();
+    const deadline = getNextSundayMidnightCT(now, extendDeadline ? 1 : 0);
+
+    if (tournament.phase === 'registration') {
+      await closeRegistrationAndStartSwiss(supabase, env, interaction, tournament, now, deadline);
       return;
     }
 
@@ -74,9 +89,6 @@ export async function handleNextRound(interaction, env) {
       }
     }
 
-    const now = new Date();
-    const deadline = getNextSundayMidnightCT(now, extendDeadline ? 1 : 0);
-
     if (tournament.phase === 'swiss') {
       if (tournament.current_round >= tournament.total_swiss_rounds) {
         await startTopCut(supabase, env, interaction, tournament, now, deadline, forcedText);
@@ -99,6 +111,77 @@ export async function handleNextRound(interaction, env) {
     });
   }
 }
+
+async function closeRegistrationAndStartSwiss(supabase, env, interaction, tournament, now, deadline) {
+  const players = await getPlayers(supabase, tournament.id);
+  if (players.length < MIN_PLAYERS) {
+    await editReply(env, interaction, { content: userError('MIN_PLAYERS') });
+    return;
+  }
+
+  const totalSwissRounds = calcSwissRounds(players.length);
+  const topCutSize = calcTopCutSize(players.length);
+
+  const { pairs, bye } = generatePairings(players, [], 1);
+  const matchRows = buildSwissMatchRows(tournament.id, 1, pairs, bye);
+  await insertMatchesWithByes(supabase, matchRows);
+
+  const { error: tourError } = await supabase
+    .from('tournaments')
+    .update({
+      phase: 'swiss',
+      current_round: 1,
+      total_swiss_rounds: totalSwissRounds,
+      top_cut_size: topCutSize,
+      round_started_at: now.toISOString(),
+      round_deadline: deadline.toISOString(),
+      updated_at: now.toISOString(),
+    })
+    .eq('id', tournament.id);
+
+  if (tourError) throw tourError;
+
+  const { data: insertedMatches } = await supabase
+    .from('matches')
+    .select('*, player1:players!matches_player1_id_fkey(*), player2:players!matches_player2_id_fkey(*)')
+    .eq('tournament_id', tournament.id)
+    .eq('round_number', 1);
+
+  const updatedTournament = {
+    ...tournament,
+    phase: 'swiss',
+    current_round: 1,
+    total_swiss_rounds: totalSwissRounds,
+    top_cut_size: topCutSize,
+    round_deadline: deadline.toISOString(),
+  };
+
+  const embed = pairingsEmbed(updatedTournament, insertedMatches ?? []);
+  embed.fields.push({
+    name: 'Format',
+    value: `${totalSwissRounds} Swiss rounds → Top ${topCutSize}`,
+  });
+
+  const pings = (insertedMatches ?? [])
+    .filter(m => m.player2_id !== null)
+    .flatMap(m => [m.player1?.discord_id, m.player2?.discord_id])
+    .filter(Boolean)
+    .map(id => `<@${id}>`)
+    .join(' ');
+
+  await resolveEphemeral(env, interaction);
+  if (pings) {
+    await sendChannelMessage(env, interaction, {
+      content: 'The tournament has begun! Registrations are now closed.\n\n' + pings + '\nPlease contact your opponent to schedule your match.'
+    });
+  } else {
+    await sendChannelMessage(env, interaction, {
+      content: 'The tournament has begun! Registrations are now closed.'
+    });
+  }
+  await sendChannelMessage(env, interaction, { embeds: [embed] });
+}
+
 
 async function advanceSwissRound(supabase, env, interaction, tournament, now, deadline, forcedText) {
   const nextRound = tournament.current_round + 1;
