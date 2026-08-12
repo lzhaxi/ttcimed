@@ -81,7 +81,8 @@ export async function handleHistory(interaction, env) {
       const targetUser = interaction.data?.resolved?.users?.[targetUserId];
       const displayName = targetUser?.global_name ?? targetUser?.username ?? player.discord_username;
       const title = `Match History: ${displayName}`;
-      let description = `**Tournament:** ${tournament.name}\n**Set Record:** ${player.swiss_wins}-${player.swiss_losses}-${player.swiss_draws} | **Game Record:** ${player.game_wins}-${player.game_losses}\n\n`;
+      const statusText = !player.is_active ? '🔴 DQ' : player.eliminated ? '🔴 Eliminated' : '🟢 Active';
+      let description = `**Tournament:** ${tournament.name}\n**Status:** ${statusText}\n**Set Record:** ${player.swiss_wins}-${player.swiss_losses}-${player.swiss_draws} | **Game Record:** ${player.game_wins}-${player.game_losses}\n\n`;
 
       if (!matches || matches.length === 0) {
         description += '*No matches found.*';

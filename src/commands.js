@@ -153,6 +153,16 @@ export const TOURNAMENTS_COMMAND = {
   type: 1,
 };
 
+export const DQ_COMMAND = {
+  name: 'dq',
+  description: 'Disqualify a player, dropping them from the tournament and granting their opponent a win',
+  type: 1,
+  options: [
+    { name: 'player', description: 'The player to disqualify', type: 6, required: true },
+  ],
+};
+
+
 export const ALL_COMMANDS = [
   REGISTER_COMMAND,
   REPORT_SCORE_COMMAND,
@@ -169,9 +179,11 @@ export const ALL_COMMANDS = [
   CANCEL_TOURNAMENT_COMMAND,
   HISTORY_COMMAND,
   TOURNAMENTS_COMMAND,
+  DQ_COMMAND,
 ];
 
 export const COMMAND_MAP = {
   ...Object.fromEntries(ALL_COMMANDS.map((c) => [c.name, c])),
   tournaments: TOURNAMENTS_COMMAND,
+  dq: DQ_COMMAND,
 };

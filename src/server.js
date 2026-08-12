@@ -21,6 +21,7 @@ import { handleHelp } from './handlers/help.js';
 import { handleCancelTournament } from './handlers/cancel-tournament.js';
 import { handleHistory } from './handlers/history.js';
 import { handleTournaments } from './handlers/tournaments.js';
+import { handleDq } from './handlers/dq.js';
 
 const EPHEMERAL_COMMANDS = new Set([
   'register',
@@ -37,7 +38,8 @@ const EPHEMERAL_COMMANDS = new Set([
   'to-remove',
   'cancel-tournament',
   'history',
-  'tournaments'
+  'tournaments',
+  'dq'
 ]);
 
 const router = Router();
@@ -101,6 +103,7 @@ const COMMAND_HANDLERS = {
   'cancel-tournament': handleCancelTournament,
   history: handleHistory,
   tournaments: handleTournaments,
+  dq: handleDq,
 };
 
 

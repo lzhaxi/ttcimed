@@ -31,7 +31,7 @@ export function matchResultEmbed(match, topCutSize) {
   };
 }
 
-export function standingsEmbed(tournament, players) {
+export function standingsEmbed(tournament, players, dqPlayers = []) {
   const topCutSize = tournament.top_cut_size || 0;
   const lines = [];
 
@@ -50,6 +50,15 @@ export function standingsEmbed(tournament, players) {
       lines.push('─'.repeat(30) + ' 🛑 *Top Cut Cutoff*');
     }
   });
+
+  if (dqPlayers.length > 0) {
+    if (lines.length > 0) lines.push('─'.repeat(30));
+    lines.push('🔴 *DQ*');
+    dqPlayers.slice(0, 10).forEach((p) => {
+      const record = `${p.swiss_wins}-${p.swiss_losses}${p.swiss_draws ? `-${p.swiss_draws}` : ''}`;
+      lines.push(`**-** ${mention(p)} — ${record}`);
+    });
+  }
 
   return {
     title: `📊 ${tournament.name} — Standings`,

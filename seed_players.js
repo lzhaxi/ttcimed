@@ -7,7 +7,8 @@ async function seed() {
   const env = process.env;
   const supabase = getSupabase(env);
   
-  const guildId = env.GUILD_ID || "mock_guild_123";
+  // const guildId = env.GUILD_ID;
+  const guildId = '435629931641176094';
   console.log(`Getting active tournament for guild ${guildId}...`);
   const tournament = await getActiveTournament(supabase, guildId);
   console.log(`Tournament ID: ${tournament.id}, Name: ${tournament.name}, Phase: ${tournament.phase}`);

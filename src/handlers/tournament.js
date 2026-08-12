@@ -36,16 +36,18 @@ export async function handleTournament(interaction, env) {
     }
 
     // Otherwise Swiss standings
-    const { data: players, error } = await supabase
+    const { data: allPlayers, error } = await supabase
       .from('players')
       .select('*')
       .eq('tournament_id', tournament.id)
-      .eq('is_active', true)
       .order('swiss_wins', { ascending: false })
       .order('buchholz', { ascending: false })
       .order('owp', { ascending: false });
 
     if (error) throw error;
+
+    const players = allPlayers?.filter(p => p.is_active) ?? [];
+    const dqPlayers = allPlayers?.filter(p => !p.is_active) ?? [];
 
     // Apply Game Win Percentage as 3rd tiebreaker (after OWP)
     if (players) {
@@ -63,7 +65,7 @@ export async function handleTournament(interaction, env) {
 
     await editReply(env, interaction, { content: 'Done' });
     await sendFollowup(env, interaction, {
-      embeds: [standingsEmbed(tournament, players ?? [])],
+      embeds: [standingsEmbed(tournament, players, dqPlayers)],
     });
   } catch (err) {
     console.error('tournament command error:', err);

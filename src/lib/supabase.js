@@ -7,15 +7,18 @@ export function getSupabase(env) {
 }
 
 export async function getActiveTournament(supabase, guildId) {
+  if (!guildId) return null;
+
   const { data, error } = await supabase
     .from('tournaments')
     .select('*')
     .eq('guild_id', guildId)
-    .neq('phase', 'completed')
-    .maybeSingle();
+    .neq('phase', 'completed');
 
   if (error) throw error;
-  return data;
+  if (!data || data.length === 0) return null;
+
+  return data[data.length - 1];
 }
 
 

@@ -5,7 +5,8 @@ dotenv.config({ path: '.dev.vars' });
 
 const token = process.env.DISCORD_TOKEN;
 const applicationId = process.env.DISCORD_APPLICATION_ID;
-const guildId = process.env.GUILD_ID;
+// const guildId = process.env.GUILD_ID;
+const guildId = '679936214513745921';
 
 if (!token) throw new Error('DISCORD_TOKEN is required.');
 if (!applicationId) throw new Error('DISCORD_APPLICATION_ID is required.');
