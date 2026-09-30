@@ -50,3 +50,16 @@ export function getSingleEliminationRoundName(topCutSize, roundNumber) {
   return `Single-Elimination Round ${roundNumber}`;
 }
 
+export function getMatchCode(topCutSize, roundNumber, slotIndex) {
+  if (!topCutSize) return `M${slotIndex + 1}`;
+  const totalRounds = Math.log2(topCutSize);
+  const remaining = totalRounds - roundNumber;
+
+  if (remaining === 0) return 'Final';
+  if (remaining === 1) return `SF${slotIndex + 1}`;
+  if (remaining === 2) return `QF${slotIndex + 1}`;
+  if (remaining === 3) return `R16-${slotIndex + 1}`;
+
+  return `R${roundNumber}-${slotIndex + 1}`;
+}
+

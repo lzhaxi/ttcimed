@@ -241,12 +241,15 @@ async function startTopCut(supabase, env, interaction, tournament, now, deadline
   const sortedPlayers = sortByStandings(players);
 
   // Assign final Swiss placement as their new seed for the single elimination bracket
-  const updatePromises = sortedPlayers.map((p, idx) => 
-    supabase.from('players').update({ seed: idx + 1 }).eq('id', p.id)
+  sortedPlayers.forEach((p, idx) => {
+    p.seed = idx + 1;
+  });
+  const updatePromises = sortedPlayers.map((p) => 
+    supabase.from('players').update({ seed: p.seed }).eq('id', p.id)
   );
   await Promise.all(updatePromises);
 
-  const pairs = seedTopCutBracket(players, tournament.top_cut_size);
+  const pairs = seedTopCutBracket(sortedPlayers, tournament.top_cut_size);
   const matchRows = buildTopCutRoundOneRows(tournament.id, pairs);
 
   const { error: matchError } = await supabase.from('matches').insert(matchRows);
@@ -288,7 +291,7 @@ async function startTopCut(supabase, env, interaction, tournament, now, deadline
     .order('bracket_slot', { ascending: true });
 
   const standingsEmb = standingsEmbed(tournament, sortedPlayers);
-  const embed = bracketEmbed(updatedTournament, allTopCutMatches ?? []);
+  const embed = bracketEmbed(updatedTournament, allTopCutMatches ?? [], { currentRoundOnly: true });
   
   const pings = (insertedMatches ?? [])
     .filter(m => m.player2_id !== null)
@@ -387,7 +390,7 @@ async function advanceTopCutRound(supabase, env, interaction, tournament, now, d
     .order('round_number', { ascending: true })
     .order('bracket_slot', { ascending: true });
 
-  const embed = bracketEmbed(updatedTournament, allTopCutMatches ?? []);
+  const embed = bracketEmbed(updatedTournament, allTopCutMatches ?? [], { currentRoundOnly: true });
   
   const pings = (insertedMatches ?? [])
     .filter(m => m.player2_id !== null)

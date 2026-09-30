@@ -1,4 +1,4 @@
-import { deadlineTimestamp, getSingleEliminationRoundName } from '../utils/permissions.js';
+import { deadlineTimestamp, getSingleEliminationRoundName, getMatchCode } from '../utils/permissions.js';
 
 export function mention(player) {
   return player?.discord_id ? `<@${player.discord_id}>` : player?.discord_username ?? 'Unknown';
@@ -81,11 +81,20 @@ export function standingsEmbed(tournament, players, dqPlayers = []) {
 }
 
 export function pairingsEmbed(tournament, matches) {
+  const isTopCut = tournament.phase === 'top_cut';
   const lines = matches.map((m) => {
-    const p1 = mention(m.player1) ?? '?';
+    const formatPlayer = (p) => {
+      if (!p) return '?';
+      const seedStr = isTopCut && typeof p.seed === 'number' ? `(#${p.seed}) ` : '';
+      return `${seedStr}${mention(p)}`;
+    };
+    const p1 = formatPlayer(m.player1);
     if (!m.player2) return `• ${p1} — **BYE**`;
-    const p2 = mention(m.player2);
-    return `• ${p1} vs ${p2}`;
+    const p2 = formatPlayer(m.player2);
+    const prefix = isTopCut && typeof m.bracket_slot === 'number'
+      ? `• **${getMatchCode(tournament.top_cut_size, m.round_number, m.bracket_slot)}:** `
+      : '• ';
+    return `${prefix}${p1} vs ${p2}`;
   });
 
   const deadline = tournament.round_deadline
@@ -143,46 +152,208 @@ export function undoEmbed(match) {
   };
 }
 
-export function bracketEmbed(tournament, matches) {
-  const rounds = {};
-  matches.forEach(m => {
-    if (!rounds[m.round_number]) rounds[m.round_number] = [];
-    rounds[m.round_number].push(m);
-  });
+export function renderAsciiGrid(topCutSize, matches) {
+  const totalRounds = Math.max(1, Math.round(Math.log2(topCutSize || 4)));
+  const totalLines = (topCutSize * 2) - 1;
 
-  const maxRound = Math.max(...Object.keys(rounds).map(Number));
+  const getMatch = (r, s) => matches.find((m) => m.round_number === r && m.bracket_slot === s);
+  const getWinner = (m) => {
+    if (!m || m.status === 'pending') return null;
+    return m.winner_id === m.player1_id ? m.player1 : (m.winner_id === m.player2_id ? m.player2 : null);
+  };
+
+  const pName = (p, maxLen = 9) => {
+    if (!p) return 'TBD'.padEnd(maxLen, ' ');
+    const name = p.discord_username || p.name || 'User';
+    const str = `[${p.seed ?? '?'}]${name}`;
+    if (str.length > maxLen) return str.slice(0, maxLen - 1) + '…';
+    return str.padEnd(maxLen, ' ');
+  };
+
+  // Collect winners / projected winners for each round
+  const winners = {};
+  for (let r = 1; r <= totalRounds; r++) {
+    winners[r] = {};
+    const count = topCutSize / (2 ** r);
+    for (let s = 0; s < count; s++) {
+      const m = getMatch(r, s);
+      const nextM = getMatch(r + 1, Math.floor(s / 2));
+      const nextP = (s % 2 === 0) ? nextM?.player1 : nextM?.player2;
+      winners[r][s] = getWinner(m) ?? nextP ?? null;
+    }
+  }
+
+  const colNameLen = 9;
+  const colWidth = colNameLen + 7;
+  const totalCols = totalRounds * colWidth + 14;
+
+  const grid = Array.from({ length: totalLines }, () => Array(totalCols).fill(' '));
+
+  const drawStr = (row, col, str) => {
+    for (let i = 0; i < str.length && col + i < totalCols; i++) {
+      grid[row][col + i] = str[i];
+    }
+  };
+
+  for (let r = 1; r <= totalRounds; r++) {
+    const colStart = (r - 1) * colWidth;
+    const count = topCutSize / (2 ** r);
+    const branchCol = colStart + colNameLen + 3;
+
+    for (let s = 0; s < count; s++) {
+      const topRow = (2 ** (r + 1)) * s + (2 ** (r - 1) - 1);
+      const botRow = (2 ** (r + 1)) * s + (3 * (2 ** (r - 1)) - 1);
+      const centerRow = (2 ** (r + 1)) * s + (2 ** r - 1);
+
+      let p1, p2;
+      if (r === 1) {
+        const m = getMatch(1, s);
+        p1 = m?.player1;
+        p2 = m?.player2;
+      } else {
+        p1 = winners[r - 1][s * 2];
+        p2 = winners[r - 1][s * 2 + 1];
+      }
+
+      drawStr(topRow, colStart, pName(p1, colNameLen) + ' ──┐');
+      drawStr(botRow, colStart, pName(p2, colNameLen) + ' ──┘');
+
+      for (let y = topRow + 1; y < botRow; y++) {
+        grid[y][branchCol] = '│';
+      }
+      drawStr(centerRow, branchCol, '├── ');
+    }
+  }
+
+  // Champion
+  const champRow = (2 ** totalRounds) - 1;
+  const champCol = totalRounds * colWidth;
+  const champ = winners[totalRounds][0];
+  drawStr(champRow, champCol, champ ? `${pName(champ, colNameLen)} 🏆` : 'TBD');
+
+  // Headers
+  const headerCols = [];
+  for (let r = 1; r <= totalRounds; r++) {
+    const remaining = totalRounds - r;
+    const name = remaining === 0 ? 'FINALS' : remaining === 1 ? 'SEMIFINALS' : remaining === 2 ? 'QUARTERFINALS' : `ROUND OF ${2 ** (remaining + 1)}`;
+    headerCols.push(name.padEnd(colWidth, ' '));
+  }
+  headerCols.push('CHAMPION');
+  const header = headerCols.join('').trimEnd();
+
+  const lines = grid.map((row) => row.join('').trimEnd());
+  return header + '\n' + lines.join('\n');
+}
+
+export function bracketEmbed(tournament, matches, { projectFuture = true, currentRoundOnly = false } = {}) {
+  const topCutSize = tournament.top_cut_size || 8;
+  const totalRounds = Math.max(1, Math.round(Math.log2(topCutSize)));
+  const targetRound = tournament.current_round || Math.max(...matches.map((m) => m.round_number), 1);
+  const maxExistingRound = Math.max(...matches.map((m) => m.round_number), 1);
+  const startRound = currentRoundOnly ? targetRound : 1;
+  const endRound = currentRoundOnly ? targetRound : (projectFuture ? totalRounds : Math.min(totalRounds, maxExistingRound));
+
+  const getMatch = (r, s) => matches.find((m) => m.round_number === r && m.bracket_slot === s);
+  const getWinner = (m) => {
+    if (!m || m.status === 'pending') return null;
+    return m.winner_id === m.player1_id ? m.player1 : (m.winner_id === m.player2_id ? m.player2 : null);
+  };
+
+  const tree = {};
+  for (let r = 1; r <= totalRounds; r++) {
+    tree[r] = [];
+    const count = topCutSize / (2 ** r);
+    for (let s = 0; s < count; s++) {
+      const existing = getMatch(r, s);
+      let p1 = existing?.player1 ?? null;
+      let p2 = existing?.player2 ?? null;
+      const winner = getWinner(existing);
+
+      if (r > 1) {
+        const f1 = tree[r - 1]?.[s * 2];
+        const f2 = tree[r - 1]?.[s * 2 + 1];
+        if (!p1 && f1?.winner) p1 = f1.winner;
+        if (!p2 && f2?.winner) p2 = f2.winner;
+      }
+
+      tree[r].push({
+        round: r,
+        slot: s,
+        player1: p1,
+        player2: p2,
+        winner,
+        existing,
+      });
+    }
+  }
+
+  const asciiTree = renderAsciiGrid(topCutSize, matches);
 
   const embed = {
     title: `🏆 Bracket: ${tournament.name}`,
+    description: '```text\n' + asciiTree + '\n```',
     color: 0x9b59b6, // purple
     fields: [],
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   };
 
-  for (let r = 1; r <= maxRound; r++) {
-    const roundMatches = rounds[r] || [];
-    const roundName = getSingleEliminationRoundName(tournament.top_cut_size, r);
+  for (let r = startRound; r <= endRound; r++) {
+    const roundName = getSingleEliminationRoundName(topCutSize, r);
+    const count = topCutSize / (2 ** r);
+    const matchLines = [];
 
-    const matchLines = roundMatches.map(m => {
-      const formatPlayer = (p) => p ? `(#${p.seed}) ${mention(p)}` : 'TBD';
-      const p1 = formatPlayer(m.player1);
-      const p2 = formatPlayer(m.player2);
-      
-      if (m.status === 'pending') {
-        return `⏳ **${p1}** vs **${p2}**`;
+    for (let s = 0; s < count; s++) {
+      const node = tree[r][s];
+      const code = getMatchCode(topCutSize, r, s);
+      const m = node.existing;
+
+      if (m && (m.status === 'completed' || m.status === 'defaulted')) {
+        const winner = node.winner;
+        const loser = winner?.id === node.player1?.id ? node.player2 : node.player1;
+        const score =
+          m.status === 'defaulted'
+            ? 'Default'
+            : `${Math.max(m.player1_score, m.player2_score)}-${Math.min(m.player1_score, m.player2_score)}`;
+        const wStr = winner ? `(#${winner.seed}) ${mention(winner)}` : 'Unknown';
+        const lStr = loser ? `(#${loser.seed}) ${mention(loser)}` : 'Unknown';
+        matchLines.push(`**${code}:** 🟢 ${wStr} defeats ${lStr} (${score})`);
+      } else if (m && m.status === 'pending') {
+        const p1 = node.player1 ? `(#${node.player1.seed}) ${mention(node.player1)}` : 'TBD';
+        const p2 = node.player2 ? `(#${node.player2.seed}) ${mention(node.player2)}` : 'TBD';
+        matchLines.push(`**${code}:** ⏳ ${p1} vs ${p2}`);
       } else {
-        const winner = m.winner_id === m.player1_id ? p1 : p2;
-        const loser = m.winner_id === m.player1_id ? p2 : p1;
-        const score = m.status === 'defaulted' ? 'Default' : `${Math.max(m.player1_score, m.player2_score)}-${Math.min(m.player1_score, m.player2_score)}`;
-        return `🟢 **${winner}** defeats **${loser}** (${score})`;
+        const f1Code = getMatchCode(topCutSize, r - 1, s * 2);
+        const f2Code = getMatchCode(topCutSize, r - 1, s * 2 + 1);
+        const p1 = node.player1 ? `(#${node.player1.seed}) ${mention(node.player1)}` : `Winner of ${f1Code}`;
+        const p2 = node.player2 ? `(#${node.player2.seed}) ${mention(node.player2)}` : `Winner of ${f2Code}`;
+        matchLines.push(`**${code}:** 🔮 ${p1} vs ${p2}`);
       }
-    }).join('\n');
+    }
 
     embed.fields.push({
       name: roundName,
-      value: matchLines || '*No matches*',
-      inline: false
+      value: matchLines.join('\n') || '*No matches*',
+      inline: false,
     });
+  }
+
+  if (currentRoundOnly && tournament.round_deadline) {
+    embed.fields.push({
+      name: 'Deadline',
+      value: deadlineTimestamp(Math.floor(new Date(tournament.round_deadline).getTime() / 1000)),
+      inline: false,
+    });
+  }
+
+  if (!currentRoundOnly) {
+    const champ = tree[totalRounds]?.[0]?.winner;
+    if (champ) {
+      embed.fields.push({
+        name: '🏆 Tournament Champion',
+        value: `**(#${champ.seed}) ${mention(champ)}**`,
+        inline: false,
+      });
+    }
   }
 
   return embed;
