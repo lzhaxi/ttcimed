@@ -287,11 +287,17 @@ export function bracketEmbed(tournament, matches, { projectFuture = true, curren
     }
   }
 
-  const asciiTree = renderAsciiGrid(topCutSize, matches);
+  let description;
+  if (topCutSize <= 16) {
+    const asciiTree = renderAsciiGrid(topCutSize, matches);
+    description = '```text\n' + asciiTree + '\n```';
+  } else {
+    description = `*Single-elimination bracket for Top ${topCutSize}. Match details listed below.*`;
+  }
 
   const embed = {
     title: `🏆 Bracket: ${tournament.name}`,
-    description: '```text\n' + asciiTree + '\n```',
+    description,
     color: 0x9b59b6, // purple
     fields: [],
     timestamp: new Date().toISOString(),
@@ -330,11 +336,39 @@ export function bracketEmbed(tournament, matches, { projectFuture = true, curren
       }
     }
 
-    embed.fields.push({
-      name: roundName,
-      value: matchLines.join('\n') || '*No matches*',
-      inline: false,
-    });
+    if (matchLines.length === 0) {
+      embed.fields.push({
+        name: roundName,
+        value: '*No matches*',
+        inline: false,
+      });
+    } else {
+      const chunks = [];
+      let currentChunk = [];
+      let currentLen = 0;
+      for (const line of matchLines) {
+        const lineLen = line.length + 1;
+        if (currentChunk.length > 0 && currentLen + lineLen > 1000) {
+          chunks.push(currentChunk.join('\n'));
+          currentChunk = [line];
+          currentLen = line.length;
+        } else {
+          currentChunk.push(line);
+          currentLen += lineLen;
+        }
+      }
+      if (currentChunk.length > 0) {
+        chunks.push(currentChunk.join('\n'));
+      }
+
+      chunks.forEach((chunk, idx) => {
+        embed.fields.push({
+          name: idx === 0 ? roundName : `${roundName} (Cont.)`,
+          value: chunk,
+          inline: false,
+        });
+      });
+    }
   }
 
   if (currentRoundOnly && tournament.round_deadline) {

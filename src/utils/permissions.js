@@ -26,7 +26,7 @@ export function calcSwissRounds(playerCount) {
 
 export function calcTopCutSize(playerCount) {
   const size = 2 ** Math.floor(Math.log2(playerCount) - 1);
-  return Math.max(4, Math.min(16, size));
+  return Math.max(4, Math.min(64, size));
 }
 
 export function matchPhaseForTournament(tournament) {
@@ -45,7 +45,7 @@ export function getSingleEliminationRoundName(topCutSize, roundNumber) {
   if (remaining === 0) return 'Finals';
   if (remaining === 1) return 'Semifinals';
   if (remaining === 2) return 'Quarterfinals';
-  if (remaining === 3) return 'Round of 16';
+  if (remaining >= 3) return `Round of ${2 ** (remaining + 1)}`;
   
   return `Single-Elimination Round ${roundNumber}`;
 }
@@ -58,7 +58,7 @@ export function getMatchCode(topCutSize, roundNumber, slotIndex) {
   if (remaining === 0) return 'Final';
   if (remaining === 1) return `SF${slotIndex + 1}`;
   if (remaining === 2) return `QF${slotIndex + 1}`;
-  if (remaining === 3) return `R16-${slotIndex + 1}`;
+  if (remaining >= 3) return `R${2 ** (remaining + 1)}-${slotIndex + 1}`;
 
   return `R${roundNumber}-${slotIndex + 1}`;
 }

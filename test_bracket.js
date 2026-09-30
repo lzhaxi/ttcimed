@@ -250,6 +250,50 @@ assert.strictEqual(sfTournamentEmbed.fields[0].name, 'Quarterfinals'); // Past h
 assert(sfTournamentEmbed.fields[0].value.includes('🟢'));
 assert.strictEqual(sfTournamentEmbed.fields[1].name, 'Semifinals');   // Upcoming matches included
 assert.strictEqual(sfTournamentEmbed.fields[2].name, 'Finals');       // Future projection included
-console.log('✔ /tournament command shows whole bracket visual AND all individual matches (past history, upcoming, and projections)!');
+// TEST 8: Large Brackets (Top 32 and Top 64) with size limits & chunking
+console.log('\nTest 8: Large Brackets (Top 32 & Top 64)');
+assert.strictEqual(calcTopCutSize(64), 32);
+assert.strictEqual(calcTopCutSize(128), 64);
+assert.strictEqual(getSingleEliminationRoundName(32, 1), 'Round of 32');
+assert.strictEqual(getSingleEliminationRoundName(64, 1), 'Round of 64');
+assert.strictEqual(getSingleEliminationRoundName(64, 2), 'Round of 32');
+assert.strictEqual(getMatchCode(32, 1, 0), 'R32-1');
+assert.strictEqual(getMatchCode(64, 1, 0), 'R64-1');
+
+// Top 32 bracket seeding
+const players32 = Array.from({ length: 32 }, (_, i) => ({
+  id: `p-${i + 1}`,
+  discord_id: `disc-${i + 1}`,
+  discord_username: `Player_${i + 1}`,
+  seed: i + 1,
+}));
+const r32Pairs = seedTopCutBracket(players32, 32);
+assert.strictEqual(r32Pairs.length, 16);
+assert.strictEqual(r32Pairs[0][0].seed, 1);
+assert.strictEqual(r32Pairs[0][1].seed, 32); // #1 vs #32
+
+const r32Rows = buildTopCutRoundOneRows(100, r32Pairs);
+const r32Matches = r32Rows.map((r, idx) => ({
+  ...r,
+  player1: r32Pairs[idx][0],
+  player2: r32Pairs[idx][1],
+  status: 'pending',
+}));
+
+const tourney32 = { name: 'Large Championship', top_cut_size: 32, phase: 'top_cut', current_round: 1 };
+const embed32 = bracketEmbed(tourney32, r32Matches, { currentRoundOnly: true });
+
+// Check description fallback
+assert(embed32.description.includes('Single-elimination bracket for Top 32'), 'Should use text description when topCutSize > 16');
+assert(!embed32.description.startsWith('```text\n'), 'Should not contain raw ASCII grid when topCutSize > 16');
+
+// Check that no field exceeds 1024 characters
+for (const field of embed32.fields) {
+  assert(field.value.length <= 1024, `Field ${field.name} exceeds 1024 chars (${field.value.length})`);
+}
+// Check that Round of 32 was chunked into (Cont.) fields if needed
+console.log(`Top 32 Round 1 field count: ${embed32.fields.length}, field names: ${embed32.fields.map(f => f.name).join(', ')}`);
+console.log('✔ Large brackets (Top 32 and Top 64) supported with limits and field chunking!');
 
 console.log('\nAll tests completed successfully! 🎉');
+
