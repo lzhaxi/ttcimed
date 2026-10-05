@@ -131,11 +131,16 @@ const completedSF = [
 
 // Build Finals (Round 3)
 const finalRows = buildNextBracketRound(100, completedSF, 3);
-assert.strictEqual(finalRows.length, 1);
+assert.strictEqual(finalRows.length, 2);
 assert.strictEqual(finalRows[0].player1_id, 'player-1');
 assert.strictEqual(finalRows[0].player2_id, 'player-2');
 assert.strictEqual(finalRows[0].bracket_slot, 0);
-console.log('✔ Finals are #1 vs #2!');
+
+// 3rd place match: Semifinal losers (#4 vs #3)
+assert.strictEqual(finalRows[1].player1_id, 'player-4');
+assert.strictEqual(finalRows[1].player2_id, 'player-3');
+assert.strictEqual(finalRows[1].bracket_slot, 1);
+console.log('✔ Finals are #1 vs #2, and 3rd Place Match is #4 vs #3!');
 
 // TEST 5: Match codes
 console.log('\nTest 5: getMatchCode');
@@ -146,6 +151,7 @@ assert.strictEqual(getMatchCode(8, 1, 3), 'QF4');
 assert.strictEqual(getMatchCode(8, 2, 0), 'SF1');
 assert.strictEqual(getMatchCode(8, 2, 1), 'SF2');
 assert.strictEqual(getMatchCode(8, 3, 0), 'Final');
+assert.strictEqual(getMatchCode(8, 3, 1), '3rd Place');
 console.log('✔ getMatchCode passed.');
 
 // TEST 6: bracketEmbed with ASCII tree and future projection
@@ -294,6 +300,172 @@ for (const field of embed32.fields) {
 // Check that Round of 32 was chunked into (Cont.) fields if needed
 console.log(`Top 32 Round 1 field count: ${embed32.fields.length}, field names: ${embed32.fields.map(f => f.name).join(', ')}`);
 console.log('✔ Large brackets (Top 32 and Top 64) supported with limits and field chunking!');
+
+// TEST 9: Losers Bracket Semifinals 3rd Place Match Functionality
+console.log('\nTest 9: Losers Bracket (Top 4, Top 16, and no other loser brackets)');
+const players4 = Array.from({ length: 4 }, (_, i) => ({
+  id: `p4-${i + 1}`,
+  discord_id: `disc4-${i + 1}`,
+  discord_username: `Player4_${i + 1}`,
+  seed: i + 1,
+  swiss_wins: 4 - i,
+  buchholz: 5,
+  owp: 0.5,
+  game_wins: 0,
+  game_losses: 0,
+}));
+
+// Top 4 seeding -> Semifinals: 1v4 and 2v3
+const sfPairs4 = seedTopCutBracket(players4, 4);
+assert.strictEqual(sfPairs4.length, 2);
+assert.strictEqual(sfPairs4[0][0].seed, 1);
+assert.strictEqual(sfPairs4[0][1].seed, 4);
+assert.strictEqual(sfPairs4[1][0].seed, 2);
+assert.strictEqual(sfPairs4[1][1].seed, 3);
+
+// Build Round 1 (Semifinals)
+const sfRows4 = buildTopCutRoundOneRows(200, sfPairs4);
+assert.strictEqual(sfRows4.length, 2);
+
+// Simulate SF results: Seed 1 beats Seed 4, Seed 3 beats Seed 2 (upset)
+const completedSF4 = [
+  {
+    ...sfRows4[0],
+    player1: players4[0],
+    player2: players4[3],
+    winner_id: 'p4-1',
+    player1_score: 3,
+    player2_score: 1,
+    status: 'completed',
+  },
+  {
+    ...sfRows4[1],
+    player1: players4[1],
+    player2: players4[2],
+    winner_id: 'p4-3',
+    player1_score: 2,
+    player2_score: 3,
+    status: 'completed',
+  },
+];
+
+// Advance to Round 2 (Finals + 3rd place match)
+const finalsRows4 = buildNextBracketRound(200, completedSF4, 2);
+assert.strictEqual(finalsRows4.length, 2, 'Top 4 Semifinals must produce exactly 2 matches (Finals + 3rd Place)');
+
+// Finals: Winner SF1 (#1) vs Winner SF2 (#3)
+assert.strictEqual(finalsRows4[0].bracket_slot, 0);
+assert.strictEqual(finalsRows4[0].player1_id, 'p4-1');
+assert.strictEqual(finalsRows4[0].player2_id, 'p4-3');
+assert.strictEqual(getMatchCode(4, 2, 0), 'Final');
+
+// 3rd Place Match: Loser SF1 (#4) vs Loser SF2 (#2)
+assert.strictEqual(finalsRows4[1].bracket_slot, 1);
+assert.strictEqual(finalsRows4[1].player1_id, 'p4-4');
+assert.strictEqual(finalsRows4[1].player2_id, 'p4-2');
+assert.strictEqual(getMatchCode(4, 2, 1), '3rd Place');
+console.log('✔ Top 4 Semifinals correctly matches winners into Finals and losers into 3rd Place Match!');
+
+// Verify Top 16: R16 (8 matches) and QF (4 matches) do NOT create losers bracket matches
+const players16 = Array.from({ length: 16 }, (_, i) => ({
+  id: `p16-${i + 1}`,
+  discord_id: `disc16-${i + 1}`,
+  discord_username: `Player16_${i + 1}`,
+  seed: i + 1,
+  swiss_wins: 16 - i,
+  buchholz: 10,
+  owp: 0.5,
+  game_wins: 0,
+  game_losses: 0,
+}));
+
+const r16Pairs = seedTopCutBracket(players16, 16);
+const r16Rows = buildTopCutRoundOneRows(300, r16Pairs);
+const completedR16 = r16Rows.map((r, idx) => ({
+  ...r,
+  player1: r16Pairs[idx][0],
+  player2: r16Pairs[idx][1],
+  winner_id: r16Pairs[idx][0].id, // higher seeds win
+  status: 'completed',
+}));
+
+// Advancing from R16 to QF (Round 2)
+const qfRows16 = buildNextBracketRound(300, completedR16, 2);
+assert.strictEqual(qfRows16.length, 4, 'Round of 16 must ONLY advance winners to QF (no loser bracket matches)');
+
+const completedQF16 = qfRows16.map((r, idx) => ({
+  ...r,
+  player1: players16[idx * 2],
+  player2: players16[idx * 2 + 1],
+  winner_id: players16[idx * 2].id,
+  status: 'completed',
+}));
+
+// Advancing from QF to SF (Round 3)
+const sfRows16 = buildNextBracketRound(300, completedQF16, 3);
+assert.strictEqual(sfRows16.length, 2, 'Quarterfinals must ONLY advance winners to SF (no loser bracket matches)');
+
+const completedSF16 = [
+  { ...sfRows16[0], player1: players16[0], player2: players16[2], winner_id: players16[0].id, status: 'completed' },
+  { ...sfRows16[1], player1: players16[4], player2: players16[6], winner_id: players16[6].id, status: 'completed' },
+];
+
+// Advancing from SF to Finals (Round 4) -> MUST create Finals AND 3rd Place Match
+const finalsRows16 = buildNextBracketRound(300, completedSF16, 4);
+assert.strictEqual(finalsRows16.length, 2, 'Semifinals must produce exactly 2 matches (Finals + 3rd Place)');
+assert.strictEqual(finalsRows16[0].bracket_slot, 0); // Finals: p16-1 vs p16-7
+assert.strictEqual(finalsRows16[1].bracket_slot, 1); // 3rd Place: p16-3 vs p16-5
+assert.strictEqual(getMatchCode(16, 4, 0), 'Final');
+assert.strictEqual(getMatchCode(16, 4, 1), '3rd Place');
+console.log('✔ Top 16 verified: NO loser bracket matches in R16 or QF, ONLY in Semifinals for 3rd Place!');
+
+// TEST 10: bracketEmbed projection and display of 3rd Place match
+console.log('\nTest 10: bracketEmbed projection and completion for 3rd Place Match');
+const tourney4 = { id: 200, name: 'Top 4 Championship', top_cut_size: 4, phase: 'top_cut', current_round: 1 };
+
+// Round 1 pending
+const r1Matches4 = [
+  { round_number: 1, bracket_slot: 0, player1_id: 'p4-1', player2_id: 'p4-4', player1: players4[0], player2: players4[3], status: 'pending' },
+  { round_number: 1, bracket_slot: 1, player1_id: 'p4-2', player2_id: 'p4-3', player1: players4[1], player2: players4[2], status: 'pending' },
+];
+
+const embed4Stage1 = bracketEmbed(tourney4, r1Matches4);
+assert.strictEqual(embed4Stage1.fields.length, 2);
+assert.strictEqual(embed4Stage1.fields[0].name, 'Semifinals');
+assert.strictEqual(embed4Stage1.fields[1].name, 'Finals');
+// Projection in Finals field must include both Final and 3rd Place projections
+assert(embed4Stage1.fields[1].value.includes('**Final:** 🔮 Winner of SF1 vs Winner of SF2'));
+assert(embed4Stage1.fields[1].value.includes('**3rd Place:** 🔮 Loser of SF1 vs Loser of SF2'));
+
+// Round 2 active (Finals + 3rd place match in progress)
+const r2Matches4 = [
+  ...completedSF4,
+  { round_number: 2, bracket_slot: 0, player1_id: 'p4-1', player2_id: 'p4-3', player1: players4[0], player2: players4[2], status: 'pending' },
+  { round_number: 2, bracket_slot: 1, player1_id: 'p4-4', player2_id: 'p4-2', player1: players4[3], player2: players4[1], status: 'pending' },
+];
+
+tourney4.current_round = 2;
+const embed4Stage2 = bracketEmbed(tourney4, r2Matches4, { currentRoundOnly: true });
+assert.strictEqual(embed4Stage2.fields[0].name, 'Finals');
+assert(embed4Stage2.fields[0].value.includes('**Final:** ⏳ (#1) <@disc4-1> vs (#3) <@disc4-3>'));
+assert(embed4Stage2.fields[0].value.includes('**3rd Place:** ⏳ (#4) <@disc4-4> vs (#2) <@disc4-2>'));
+
+// Round 2 completed
+r2Matches4[2].status = 'completed';
+r2Matches4[2].winner_id = 'p4-1';
+r2Matches4[2].player1_score = 3;
+r2Matches4[2].player2_score = 0;
+
+r2Matches4[3].status = 'completed';
+r2Matches4[3].winner_id = 'p4-2';
+r2Matches4[3].player1_score = 1;
+r2Matches4[3].player2_score = 3;
+
+tourney4.phase = 'completed';
+const embed4Final = bracketEmbed(tourney4, r2Matches4, { currentRoundOnly: false });
+assert(embed4Final.fields.some(f => f.name === '🏆 Tournament Champion' && f.value.includes('(#1) <@disc4-1>')));
+assert(embed4Final.fields.some(f => f.name === '🥉 3rd Place' && f.value.includes('(#2) <@disc4-2>')));
+console.log('✔ bracketEmbed properly displays 3rd Place projections, pending matches, results, and podium!');
 
 console.log('\nAll tests completed successfully! 🎉');
 

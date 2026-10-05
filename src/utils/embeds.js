@@ -13,7 +13,9 @@ export function matchResultEmbed(match, topCutSize) {
     match.winner_id === match.player1_id ? p1 : match.winner_id === match.player2_id ? p2 : 'TBD';
 
   const roundName = match.phase === 'top_cut'
-    ? getSingleEliminationRoundName(topCutSize, match.round_number)
+    ? (topCutSize && match.bracket_slot === 1 && match.round_number === Math.log2(topCutSize)
+        ? '3rd Place Match'
+        : getSingleEliminationRoundName(topCutSize, match.round_number))
     : `Swiss R${match.round_number}`;
 
   return {
@@ -127,7 +129,9 @@ export function myMatchEmbed(match, tournament) {
     : 'TBD';
 
   const roundName = tournament.phase === 'top_cut'
-    ? getSingleEliminationRoundName(tournament.top_cut_size, tournament.current_round)
+    ? (tournament.top_cut_size && match.bracket_slot === 1 && tournament.current_round === Math.log2(tournament.top_cut_size)
+        ? '3rd Place Match'
+        : getSingleEliminationRoundName(tournament.top_cut_size, tournament.current_round))
     : String(tournament.current_round);
 
   return {
@@ -258,22 +262,35 @@ export function bracketEmbed(tournament, matches, { projectFuture = true, curren
     if (!m || m.status === 'pending') return null;
     return m.winner_id === m.player1_id ? m.player1 : (m.winner_id === m.player2_id ? m.player2 : null);
   };
+  const getLoser = (m) => {
+    if (!m || m.status === 'pending') return null;
+    return m.winner_id === m.player1_id ? m.player2 : (m.winner_id === m.player2_id ? m.player1 : null);
+  };
 
   const tree = {};
   for (let r = 1; r <= totalRounds; r++) {
     tree[r] = [];
-    const count = topCutSize / (2 ** r);
+    const isFinalRound = r === totalRounds && totalRounds >= 2;
+    const count = isFinalRound ? 2 : topCutSize / (2 ** r);
     for (let s = 0; s < count; s++) {
       const existing = getMatch(r, s);
       let p1 = existing?.player1 ?? null;
       let p2 = existing?.player2 ?? null;
       const winner = getWinner(existing);
+      const loser = getLoser(existing);
 
       if (r > 1) {
-        const f1 = tree[r - 1]?.[s * 2];
-        const f2 = tree[r - 1]?.[s * 2 + 1];
-        if (!p1 && f1?.winner) p1 = f1.winner;
-        if (!p2 && f2?.winner) p2 = f2.winner;
+        if (isFinalRound && s === 1) {
+          const sf1Node = tree[r - 1]?.[0];
+          const sf2Node = tree[r - 1]?.[1];
+          if (!p1 && sf1Node?.loser) p1 = sf1Node.loser;
+          if (!p2 && sf2Node?.loser) p2 = sf2Node.loser;
+        } else {
+          const f1 = tree[r - 1]?.[s * 2];
+          const f2 = tree[r - 1]?.[s * 2 + 1];
+          if (!p1 && f1?.winner) p1 = f1.winner;
+          if (!p2 && f2?.winner) p2 = f2.winner;
+        }
       }
 
       tree[r].push({
@@ -282,6 +299,7 @@ export function bracketEmbed(tournament, matches, { projectFuture = true, curren
         player1: p1,
         player2: p2,
         winner,
+        loser,
         existing,
       });
     }
@@ -305,7 +323,8 @@ export function bracketEmbed(tournament, matches, { projectFuture = true, curren
 
   for (let r = startRound; r <= endRound; r++) {
     const roundName = getSingleEliminationRoundName(topCutSize, r);
-    const count = topCutSize / (2 ** r);
+    const isFinalRound = r === totalRounds && totalRounds >= 2;
+    const count = isFinalRound ? 2 : topCutSize / (2 ** r);
     const matchLines = [];
 
     for (let s = 0; s < count; s++) {
@@ -328,10 +347,18 @@ export function bracketEmbed(tournament, matches, { projectFuture = true, curren
         const p2 = node.player2 ? `(#${node.player2.seed}) ${mention(node.player2)}` : 'TBD';
         matchLines.push(`**${code}:** ⏳ ${p1} vs ${p2}`);
       } else {
-        const f1Code = getMatchCode(topCutSize, r - 1, s * 2);
-        const f2Code = getMatchCode(topCutSize, r - 1, s * 2 + 1);
-        const p1 = node.player1 ? `(#${node.player1.seed}) ${mention(node.player1)}` : `Winner of ${f1Code}`;
-        const p2 = node.player2 ? `(#${node.player2.seed}) ${mention(node.player2)}` : `Winner of ${f2Code}`;
+        let p1, p2;
+        if (isFinalRound && s === 1) {
+          const sf1Code = getMatchCode(topCutSize, r - 1, 0);
+          const sf2Code = getMatchCode(topCutSize, r - 1, 1);
+          p1 = node.player1 ? `(#${node.player1.seed}) ${mention(node.player1)}` : `Loser of ${sf1Code}`;
+          p2 = node.player2 ? `(#${node.player2.seed}) ${mention(node.player2)}` : `Loser of ${sf2Code}`;
+        } else {
+          const f1Code = getMatchCode(topCutSize, r - 1, s * 2);
+          const f2Code = getMatchCode(topCutSize, r - 1, s * 2 + 1);
+          p1 = node.player1 ? `(#${node.player1.seed}) ${mention(node.player1)}` : `Winner of ${f1Code}`;
+          p2 = node.player2 ? `(#${node.player2.seed}) ${mention(node.player2)}` : `Winner of ${f2Code}`;
+        }
         matchLines.push(`**${code}:** 🔮 ${p1} vs ${p2}`);
       }
     }
@@ -381,10 +408,18 @@ export function bracketEmbed(tournament, matches, { projectFuture = true, curren
 
   if (!currentRoundOnly) {
     const champ = tree[totalRounds]?.[0]?.winner;
+    const third = tree[totalRounds]?.[1]?.winner;
     if (champ) {
       embed.fields.push({
         name: '🏆 Tournament Champion',
         value: `**(#${champ.seed}) ${mention(champ)}**`,
+        inline: false,
+      });
+    }
+    if (third) {
+      embed.fields.push({
+        name: '🥉 3rd Place',
+        value: `**(#${third.seed}) ${mention(third)}**`,
         inline: false,
       });
     }

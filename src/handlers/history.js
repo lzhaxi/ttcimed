@@ -92,7 +92,11 @@ export async function handleHistory(interaction, env) {
           const opp = isPlayer1 ? m.player2 : m.player1;
           const myScore = isPlayer1 ? m.player1_score : m.player2_score;
           const oppScore = isPlayer1 ? m.player2_score : m.player1_score;
-          const phaseText = m.phase === 'swiss' ? `Swiss R${m.round_number}` : getSingleEliminationRoundName(tournament.top_cut_size, m.round_number);
+          const phaseText = m.phase === 'swiss'
+            ? `Swiss R${m.round_number}`
+            : (tournament.top_cut_size && m.bracket_slot === 1 && m.round_number === Math.log2(tournament.top_cut_size)
+                ? '3rd Place Match'
+                : getSingleEliminationRoundName(tournament.top_cut_size, m.round_number));
           
           if (!opp) return `**[${phaseText}]** BYE`;
           if (m.status === 'pending') return `**[${phaseText}]** Pending vs **${mention(opp)}**`;

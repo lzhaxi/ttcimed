@@ -20,7 +20,7 @@ import {
   buildNextBracketRound,
   isRoundComplete,
 } from '../services/bracket.js';
-import { pairingsEmbed, bracketEmbed, standingsEmbed } from '../utils/embeds.js';
+import { pairingsEmbed, bracketEmbed, standingsEmbed, mention } from '../utils/embeds.js';
 import { getNextSundayMidnightCT } from '../utils/dates.js';
 import { resolveEphemeral, sendChannelMessage } from '../lib/discord.js';
 
@@ -324,21 +324,37 @@ async function advanceTopCutRound(supabase, env, interaction, tournament, now, d
     'top_cut'
   );
 
-  if (completed.length === 1) {
-    const finalMatch = completed[0];
+  const totalRounds = Math.max(1, Math.round(Math.log2(tournament.top_cut_size || 4)));
+
+  if (tournament.current_round >= totalRounds || completed.length === 1) {
+    const finalMatch = completed.find((m) => m.bracket_slot === 0) || completed[0];
+    const thirdMatch = completed.find((m) => m.bracket_slot === 1);
     const winner =
       finalMatch.winner_id === finalMatch.player1_id
         ? finalMatch.player1
         : finalMatch.player2;
+    const runnerUp =
+      finalMatch.winner_id === finalMatch.player1_id
+        ? finalMatch.player2
+        : finalMatch.player1;
+    const thirdPlace = thirdMatch
+      ? (thirdMatch.winner_id === thirdMatch.player1_id ? thirdMatch.player1 : thirdMatch.player2)
+      : null;
 
     await supabase
       .from('tournaments')
       .update({ phase: 'completed', updated_at: now.toISOString() })
       .eq('id', tournament.id);
 
+    const fields = [];
+    if (winner) fields.push({ name: '🥇 1st Place', value: mention(winner), inline: true });
+    if (runnerUp) fields.push({ name: '🥈 2nd Place', value: mention(runnerUp), inline: true });
+    if (thirdPlace) fields.push({ name: '🥉 3rd Place', value: mention(thirdPlace), inline: true });
+
     const embed = {
-      title: '🏆 Tournament Complete!',
-      description: `**${winner ? `<@${winner.discord_id}>` : 'Unknown'}** wins the tournament! Congratulations!`,
+      title: `🏆 ${tournament.name} Results`,
+      description: `**${winner ? `<@${winner.discord_id}>` : 'Unknown'}** wins **${tournament.name}!** Congratulations!`,
+      fields: fields.length > 0 ? fields : undefined,
       color: 0xfee75c,
       timestamp: now.toISOString(),
     };
@@ -353,6 +369,17 @@ async function advanceTopCutRound(supabase, env, interaction, tournament, now, d
 
   const nextRound = tournament.current_round + 1;
   const nextRows = buildNextBracketRound(tournament.id, completed, nextRound);
+
+  // If entering final round with 3rd place match, unmark eliminated for semifinal losers so they are active for 3rd place match
+  if (completed.length === 2 && nextRows.length === 2) {
+    const thirdMatch = nextRows.find((m) => m.bracket_slot === 1);
+    if (thirdMatch) {
+      await supabase
+        .from('players')
+        .update({ eliminated: false })
+        .in('id', [thirdMatch.player1_id, thirdMatch.player2_id]);
+    }
+  }
 
   const { error: matchError } = await supabase.from('matches').insert(nextRows);
   if (matchError) throw matchError;

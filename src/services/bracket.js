@@ -54,8 +54,9 @@ export function buildTopCutRoundOneRows(tournamentId, pairs) {
 
 /** Given completed top-cut matches in a round, build next-round pairings */
 export function buildNextBracketRound(tournamentId, completedMatches, nextRound) {
-  const winners = completedMatches
-    .sort((a, b) => (a.bracket_slot ?? 0) - (b.bracket_slot ?? 0))
+  const sorted = [...completedMatches].sort((a, b) => (a.bracket_slot ?? 0) - (b.bracket_slot ?? 0));
+
+  const winners = sorted
     .map((m) => {
       const winner =
         m.winner_id === m.player1_id ? m.player1 : m.winner_id === m.player2_id ? m.player2 : null;
@@ -66,6 +67,22 @@ export function buildNextBracketRound(tournamentId, completedMatches, nextRound)
   const pairs = [];
   for (let i = 0; i + 1 < winners.length; i += 2) {
     pairs.push([winners[i], winners[i + 1]]);
+  }
+
+  // If this was the semifinals (exactly 2 completed matches), match the losers against each other for the 3rd place match.
+  // There are no other loser's bracket matches in any other round.
+  if (sorted.length === 2) {
+    const losers = sorted
+      .map((m) => {
+        const loser =
+          m.winner_id === m.player1_id ? m.player2 : m.winner_id === m.player2_id ? m.player1 : null;
+        return { ...loser, bracket_slot: m.bracket_slot };
+      })
+      .filter(Boolean);
+
+    if (losers.length === 2) {
+      pairs.push([losers[0], losers[1]]);
+    }
   }
 
   return pairs.map(([p1, p2], idx) => ({

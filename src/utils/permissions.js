@@ -55,7 +55,7 @@ export function getMatchCode(topCutSize, roundNumber, slotIndex) {
   const totalRounds = Math.log2(topCutSize);
   const remaining = totalRounds - roundNumber;
 
-  if (remaining === 0) return 'Final';
+  if (remaining === 0) return slotIndex === 1 ? '3rd Place' : 'Final';
   if (remaining === 1) return `SF${slotIndex + 1}`;
   if (remaining === 2) return `QF${slotIndex + 1}`;
   if (remaining >= 3) return `R${2 ** (remaining + 1)}-${slotIndex + 1}`;
